@@ -154,7 +154,7 @@ class Connect(object):
             if (len(inspect.stack()) > sys.getrecursionlimit() // 2):   # Note: https://github.com/sqlmapproject/sqlmap/issues/4525
                 warnMsg = "unable to connect to the target URL"
                 raise SqlmapConnectionException(warnMsg)
-        except TypeError:
+        except (TypeError, UnicodeError):
             pass
 
         try:
@@ -501,6 +501,9 @@ class Connect(object):
                 headers[HTTP_HEADER.HOST] = "localhost"
 
             for key, value in list(headers.items()):
+                if key.upper() == HTTP_HEADER.ACCEPT_ENCODING.upper():
+                    value = re.sub(r"(?i)(,)br(,)?", lambda match: ',' if match.group(1) and match.group(2) else "", value) or "identity"
+
                 del headers[key]
                 if isinstance(value, six.string_types):
                     for char in (r"\r", r"\n"):
@@ -805,7 +808,7 @@ class Connect(object):
                     debugMsg = "got HTTP error code: %d ('%s')" % (code, status)
                     logger.debug(debugMsg)
 
-        except (_urllib.error.URLError, socket.error, socket.timeout, _http_client.HTTPException, struct.error, binascii.Error, ProxyError, SqlmapCompressionException, WebSocketException, TypeError, ValueError, OverflowError, AttributeError):
+        except (_urllib.error.URLError, socket.error, socket.timeout, _http_client.HTTPException, struct.error, binascii.Error, ProxyError, SqlmapCompressionException, WebSocketException, TypeError, ValueError, OverflowError, AttributeError, OSError):
             tbMsg = traceback.format_exc()
 
             if conf.debug:
@@ -821,7 +824,7 @@ class Connect(object):
             elif "no host given" in tbMsg:
                 warnMsg = "invalid URL address used (%s)" % repr(url)
                 raise SqlmapSyntaxException(warnMsg)
-            elif "forcibly closed" in tbMsg or "Connection is already closed" in tbMsg:
+            elif any(_ in tbMsg for _ in ("forcibly closed", "Connection is already closed", "ConnectionAbortedError")):
                 warnMsg = "connection was forcibly closed by the target URL"
             elif "timed out" in tbMsg:
                 if kb.testMode and kb.testType not in (None, PAYLOAD.TECHNIQUE.TIME, PAYLOAD.TECHNIQUE.STACKED):
@@ -1541,7 +1544,10 @@ class Connect(object):
                         if payload is None:
                             value = value.replace(kb.customInjectionMark, "")
                         else:
-                            value = re.sub(r"\w*%s" % re.escape(kb.customInjectionMark), payload, value)
+                            try:
+                                value = re.sub(r"\w*%s" % re.escape(kb.customInjectionMark), payload, value)
+                            except re.error:
+                                value = re.sub(r"\w*%s" % re.escape(kb.customInjectionMark), re.escape(payload), value)
                     return value
                 page, headers, code = Connect.getPage(url=_(kb.secondReq[0]), post=_(kb.secondReq[2]), method=kb.secondReq[1], cookie=kb.secondReq[3], silent=silent, auxHeaders=dict(auxHeaders, **dict(kb.secondReq[4])), response=response, raise404=False, ignoreTimeout=timeBasedCompare, refreshing=True)
 

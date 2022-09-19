@@ -590,7 +590,7 @@ class Backend(object):
     def isVersionGreaterOrEqualThan(version):
         retVal = False
 
-        if Backend.getVersion() is not None and version is not None:
+        if all(_ not in (None, UNKNOWN_DBMS_VERSION) for _ in (Backend.getVersion(), version)):
             _version = unArrayizeValue(Backend.getVersion())
             _version = re.sub(r"[<>= ]", "", _version)
 
@@ -3708,7 +3708,7 @@ def getSortedInjectionTests():
         if test.stype == PAYLOAD.TECHNIQUE.UNION:
             retVal = SORT_ORDER.LAST
 
-        elif "details" in test and "dbms" in test.details:
+        elif "details" in test and "dbms" in (test.details or {}):
             if intersect(test.details.dbms, Backend.getIdentifiedDbms()):
                 retVal = SORT_ORDER.SECOND
             else:
@@ -4693,7 +4693,7 @@ def findPageForms(content, url, raise_=False, addToTargets=False):
         else:
             url = urldecode(request.get_full_url(), kb.pageEncoding)
             method = request.get_method()
-            data = request.data
+            data = unArrayizeValue(request.data)
             data = urldecode(data, kb.pageEncoding, spaceplus=False)
 
             if not data and method and method.upper() == HTTPMETHOD.POST:

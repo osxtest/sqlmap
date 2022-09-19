@@ -2045,6 +2045,7 @@ def _setKnowledgeBaseAttributes(flushAll=True):
     kb.delayCandidates = TIME_DELAY_CANDIDATES * [0]
     kb.dep = None
     kb.disableHtmlDecoding = False
+    kb.disableShiftTable = False
     kb.dnsMode = False
     kb.dnsTest = None
     kb.docRoot = None
@@ -2206,7 +2207,7 @@ def _useWizardInterface():
 
     while not conf.url:
         message = "Please enter full target URL (-u): "
-        conf.url = readInput(message, default=None)
+        conf.url = readInput(message, default=None, checkBatch=False)
 
     message = "%s data (--data) [Enter for None]: " % ((conf.method if conf.method != HTTPMETHOD.GET else None) or HTTPMETHOD.POST)
     conf.data = readInput(message, default=None)
@@ -2839,10 +2840,13 @@ def _basicOptionValidation():
         else:
             conf.encoding = _
 
-    if conf.loadCookies:
-        if not os.path.exists(conf.loadCookies):
-            errMsg = "cookies file '%s' does not exist" % conf.loadCookies
-            raise SqlmapFilePathException(errMsg)
+    if conf.fileWrite and not os.path.isfile(conf.fileWrite):
+        errMsg = "file '%s' does not exist" % os.path.abspath(conf.fileWrite)
+        raise SqlmapFilePathException(errMsg)
+
+    if conf.loadCookies and not os.path.exists(conf.loadCookies):
+        errMsg = "cookies file '%s' does not exist" % os.path.abspath(conf.loadCookies)
+        raise SqlmapFilePathException(errMsg)
 
 def initOptions(inputOptions=AttribDict(), overrideOptions=False):
     _setConfAttributes()
