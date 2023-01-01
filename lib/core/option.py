@@ -416,6 +416,9 @@ def _doSearch():
                 conf.googlePage += 1
 
 def _setStdinPipeTargets():
+    if conf.url:
+        return
+
     if isinstance(conf.stdinPipe, _collections.Iterable):
         infoMsg = "using 'STDIN' for parsing targets list"
         logger.info(infoMsg)
@@ -2094,7 +2097,7 @@ def _setKnowledgeBaseAttributes(flushAll=True):
     kb.lastParserStatus = None
 
     kb.locks = AttribDict()
-    for _ in ("cache", "connError", "count", "handlers", "hint", "index", "io", "limit", "liveCookies", "log", "socket", "redirect", "request", "value"):
+    for _ in ("cache", "connError", "count", "handlers", "hint", "identYwaf", "index", "io", "limit", "liveCookies", "log", "socket", "redirect", "request", "value"):
         kb.locks[_] = threading.Lock()
 
     kb.matchRatio = None
@@ -2166,7 +2169,6 @@ def _setKnowledgeBaseAttributes(flushAll=True):
     kb.testType = None
     kb.threadContinue = True
     kb.threadException = False
-    kb.tlsSNI = {}
     kb.uChar = NULL
     kb.udfFail = False
     kb.unionDuplicates = False
@@ -2675,7 +2677,7 @@ def _basicOptionValidation():
             logger.warning(warnMsg)
 
 
-    if conf.cookieDel and len(conf.cookieDel):
+    if conf.cookieDel and len(conf.cookieDel) != 1:
         errMsg = "option '--cookie-del' should contain a single character (e.g. ';')"
         raise SqlmapSyntaxException(errMsg)
 
@@ -2731,6 +2733,10 @@ def _basicOptionValidation():
 
     if conf.csrfMethod and not conf.csrfToken:
         errMsg = "option '--csrf-method' requires usage of option '--csrf-token'"
+        raise SqlmapSyntaxException(errMsg)
+
+    if conf.csrfData and not conf.csrfToken:
+        errMsg = "option '--csrf-data' requires usage of option '--csrf-token'"
         raise SqlmapSyntaxException(errMsg)
 
     if conf.csrfToken and conf.threads > 1:
